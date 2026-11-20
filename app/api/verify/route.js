@@ -24,14 +24,18 @@ const resultSchema = {
   required: ["flags", "summary"],
 };
 
-const PROMPT = `You are reviewing a resume, diploma, or employment document for a hiring verification tool.
+function buildPrompt() {
+  const today = new Date().toISOString().slice(0, 10); // e.g. "2026-11-20"
+  return `Today's date is ${today}. Treat any date on or before today as valid, not as "in the future".
+You are reviewing a resume, diploma, or employment document for a hiring verification tool.
 Extract the fields defined in the schema. If a field isn't present in the document, leave it null.
 Then check for inconsistencies a human reviewer would flag as suspicious, such as:
 - graduation date earlier than enrollment date
 - overlapping employment date ranges
-- dates that are impossible (e.g. in the future, or before 1950)
+- dates that are impossible (e.g. after ${today}, or before 1950)
 List each issue found as a short string in "flags". If nothing looks wrong, return an empty array.
 Write a one-sentence "summary" of who/what the document is about.`;
+}
 
 export async function POST(request) {
   const authHeader = request.headers.get("authorization") || "";
@@ -73,7 +77,7 @@ export async function POST(request) {
 
     const result = await model.generateContent([
       { inlineData: { data: base64Data, mimeType: file.type } },
-      { text: PROMPT },
+      { text: buildPrompt() },
     ]);
 
     extracted = JSON.parse(result.response.text());
